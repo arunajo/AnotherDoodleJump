@@ -11,7 +11,7 @@ screen = pygame.display.set_mode((Screen_width, Screen_height))
 
 # частота кадров
 clock = pygame.time.Clock()
-frequency = 60
+Frequency = 60
 
 # загрузка изображений
 bg = pygame.image.load("images/bg.png").convert_alpha()
@@ -114,6 +114,7 @@ class Platform(pygame.sprite.Sprite):
         # обновление положения платформ по y
         self.rect.y += speed_of_scroll
 
+
 # создание группы платформ, которая хранит все платформы в игре
 platforms = pygame.sprite.Group()
 
@@ -125,14 +126,13 @@ for pl in range(Platforms_amount):
     platform = Platform(pl_x, pl_y, pl_w)
     platforms.add(platform)
 
-
 # расположение персонажа
 player = Player(Screen_width // 2, Screen_height - 150)
 
 # основной игровой цикл
 flag = True
 while flag:
-    clock.tick(frequency)
+    clock.tick(Frequency)
     
     speed_of_scroll = player.move()
     
@@ -142,8 +142,11 @@ while flag:
         scroll_bg = 0
     bg_move(scroll_bg)
 
+    platforms.update(speed_of_scroll)
+    
     platforms.draw(screen)
     player.draw()
+    
     # события в игре
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
