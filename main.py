@@ -4,6 +4,7 @@ import random
 import os
 from rival import Rival
 from sheeet import SpriteSheet
+import menu
 
 pygame.init()
 mixer.init()
@@ -69,6 +70,9 @@ def text_on_screen(text, font, tcolor, x, y):
 # вывод счёта
 def score_on_screen():
     text_on_screen("SCORE: " + str(score), Font1, "white", 0, 0)
+    text_on_screen("'esc' - pause", Font1, "white", Screen_width - 80, 0)
+    text_on_screen("'c' - continue", Font1, "white", Screen_width - 80, 18)
+    text_on_screen("'q' - quit", Font1, "white", Screen_width - 80, 36)
     
 
 # пауза
