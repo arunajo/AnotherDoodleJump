@@ -1,11 +1,13 @@
 import pygame
 import random
 import os
+from rival import Rival
+from sheeet import SpriteSheet
 
 pygame.init()
 
 # игровое окно
-pygame.display.set_caption("DoodleJump")
+pygame.display.set_caption("AnotherDoodleJump")
 Screen_width = 400
 Screen_height = 600
 screen = pygame.display.set_mode((Screen_width, Screen_height))
@@ -18,7 +20,8 @@ Frequency = 60
 bg = pygame.image.load("images/bg.png").convert_alpha()
 player_image = pygame.image.load("images/player.png").convert_alpha()
 platform_img = pygame.image.load("images/platform.png").convert_alpha()
-
+rock_sheet_img = pygame.image.load("images/rocks.png").convert_alpha()
+rock_sheet = SpriteSheet(rock_sheet_img)
 
 # шрифты
 Font1 = pygame.font.SysFont("arial", 20)
@@ -40,7 +43,8 @@ if os.path.exists("score.txt"):
         high_score = int(file.read())
 else:
     high_score = 0
-    
+
+
 # движение фона
 def bg_move(scroll_bg):
     screen.blit(bg, (0, 0 + scroll_bg))
@@ -124,6 +128,9 @@ class Player():
         self.rect.x += delta_x
         self.rect.y += delta_y  + speed_of_scroll
 
+        # обновление маски
+        self.mask = pygame.mask.from_surface(self.img)
+
         return speed_of_scroll
 
 
@@ -162,6 +169,9 @@ class Platform(pygame.sprite.Sprite):
 # создание группы платформ, которая хранит все платформы в игре
 platforms = pygame.sprite.Group()
 
+# создание группы препятствий
+rocks = pygame.sprite.Group()
+
 # стартовая платформа
 platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100, 1)
 platforms.add(platform)
@@ -195,6 +205,14 @@ while flag:
         # обновление платформ
         platforms.update(speed_of_scroll)
 
+         # создание препятствий
+        if len(rocks) == 0 and score > 1300:
+            rival = Rival(Screen_width, 100, rock_sheet, 1.5)
+            rocks.add(rival)
+
+        # обновление препятствий
+        rocks.update(speed_of_scroll, Screen_width)
+
         # обновление счёта
         if speed_of_scroll > 0:
             score += speed_of_scroll
@@ -206,12 +224,19 @@ while flag:
 
         
         platforms.draw(screen)
+        rocks.draw(screen)
         player.draw()
         score_on_screen()
 
         # конец игры?
         if player.rect.top > Screen_height:
             game_over = True
+
+        # проверка столкновений с препятствиями
+        if pygame.sprite.spritecollide(player, rocks, False):
+            if pygame.sprite.spritecollide(player, rocks, False, pygame.sprite.collide_mask):
+                game_over = True
+    
     else:
         #затемнение экрана
         if dark_count < Screen_width:
@@ -221,13 +246,14 @@ while flag:
             text_on_screen("GAME OVER", Font2, 'white', 130, 250)
             text_on_screen("SCORE: " + str(score), Font2, "white", 130, 280)
             text_on_screen("Нажмите пробел, чтобы начать сначала", Font1, 'white', 55, 350)
-            key = pygame.key.get_pressed()
+            
             
             # обновление рекорда
             if score > high_score:
                 high_score = score
                 with open("score.txt", 'w') as file:
                         file.write(str(high_score))
+            key = pygame.key.get_pressed()
             if key[pygame.K_SPACE]:
                 # обнуляем переменные
                 game_over = False
@@ -238,6 +264,8 @@ while flag:
                 player.rect.center = (Screen_width // 2, Screen_height - 150)
                 # обнуляем платформы
                 platforms.empty()
+                # обнуляем препятствия
+                rocks.empty()
                 # стартовая платформа
                 platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100, 1)
                 platforms.add(platform)
@@ -252,5 +280,6 @@ while flag:
             flag = False
 
     pygame.display.update()
+
 
 pygame.quit()
