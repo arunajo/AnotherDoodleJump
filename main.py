@@ -34,7 +34,7 @@ rock_sheet_img = pygame.image.load("images/rocks.png").convert_alpha()
 rock_sheet = SpriteSheet(rock_sheet_img)
 
 # шрифты
-Font1 = pygame.font.SysFont("arial", 20)
+Font1 = pygame.font.SysFont("arial", 15)
 Font2 = pygame.font.SysFont("arial", 25)
 
 # переменные
