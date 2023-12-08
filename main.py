@@ -18,16 +18,31 @@ bg = pygame.image.load("images/bg.png").convert_alpha()
 player_image = pygame.image.load("images/player.png").convert_alpha()
 platform_img = pygame.image.load("images/platform.png").convert_alpha()
 
+# шрифты
+Font1 = pygame.font.SysFont("arial", 20)
+Font2 = pygame.font.SysFont("arial", 25)
+
+# переменные
 G = 1 # гравитация
 Platforms_amount = 11  # кол-во платформ
-Upline = 200
-speed_of_scroll = 0
-scroll_bg = 0
+Upline = 200 # линия обновления страницы
+speed_of_scroll = 0 
+scroll_bg = 0 
+game_over = False
+score = 0
+
 
 # движение фона
 def bg_move(scroll_bg):
     screen.blit(bg, (0, 0 + scroll_bg))
     screen.blit(bg, (0, -Screen_height + scroll_bg))
+
+
+# вывод текста
+def text_on_screen(text, font, tcolor, x, y):
+    write = font.render(text, True, tcolor)
+    screen.blit(write, (x, y))
+    
 
 class Player():
     # рамки персонажа
@@ -43,8 +58,8 @@ class Player():
    # отрисовка персонажа
     def draw(self):
         screen.blit(pygame.transform.flip(self.img, self.reflect, False), (self.rect.x - 10, self.rect.y - 5))
-        #pygame.draw.rect(screen, "white", self.rect, 2)
 
+    
     def move(self):
         speed_of_scroll = 0
         # изменения координат x и y
@@ -60,6 +75,7 @@ class Player():
         if key[pygame.K_d]:
             delta_x = 7
             self.reflect = False
+            
         # по вертикали(падение)
         self.vert += G
         delta_y += self.vert
@@ -71,11 +87,6 @@ class Player():
             
         if self.rect.right + delta_x > Screen_width:
             delta_x = Screen_width - self.rect.right
-            
-        # персонаж отпрыгивает от низа экрана
-        if self.rect.bottom + delta_y > Screen_height:
-            delta_y = 0
-            self.vert = -20
 
         # проверка: касается ли платформ
         for platform in platforms:
@@ -97,10 +108,11 @@ class Player():
 
         # передвижение персонажа
         self.rect.x += delta_x
-        self.rect.y += delta_y
+        self.rect.y += delta_y  + speed_of_scroll
 
         return speed_of_scroll
-        
+
+
 class Platform(pygame.sprite.Sprite):
     # создание размера и положения платформы
     def __init__(self, x, y, width):
@@ -114,17 +126,18 @@ class Platform(pygame.sprite.Sprite):
         # обновление положения платформ по y
         self.rect.y += speed_of_scroll
 
+        # проверка: платформа вышла из поля зрения
+        if self.rect.top > Screen_height:
+            # удаляем из группы ушедшую платформу
+            self.kill()
+
 
 # создание группы платформ, которая хранит все платформы в игре
 platforms = pygame.sprite.Group()
 
-# расположение платформ
-for pl in range(Platforms_amount):
-    pl_w = random.randint(40, 60)
-    pl_x = random.randint(0, Screen_width - pl_w)
-    pl_y = pl * random.randint(80, 120)
-    platform = Platform(pl_x, pl_y, pl_w)
-    platforms.add(platform)
+# стартовая платформа
+platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100)
+platforms.add(platform)
 
 # расположение персонажа
 player = Player(Screen_width // 2, Screen_height - 150)
@@ -134,19 +147,49 @@ flag = True
 while flag:
     clock.tick(Frequency)
     
-    speed_of_scroll = player.move()
-    
-    # задний фон
-    scroll_bg += speed_of_scroll
-    if scroll_bg >= Screen_height:
-        scroll_bg = 0
-    bg_move(scroll_bg)
+    if not game_over:  
+        speed_of_scroll = player.move()
+        
+        # задний фон
+        scroll_bg += speed_of_scroll
+        if scroll_bg >= Screen_height:
+            scroll_bg = 0
+        bg_move(scroll_bg)
 
-    platforms.update(speed_of_scroll)
+        # создание платформ
+        if len(platforms) < Platforms_amount:
+            pl_width = random.randint(40, 60)
+            pl_x = random.randint(0, Screen_width - pl_width)
+            pl_y = platform.rect.y - random.randint(80, 120)
+            platform = Platform(pl_x, pl_y, pl_width)
+            platforms.add(platform)
     
-    platforms.draw(screen)
-    player.draw()
-    
+        platforms.update(speed_of_scroll)
+        
+        platforms.draw(screen)
+        player.draw()
+
+        # конец игры?
+        if player.rect.top > Screen_height:
+            game_over = True
+    else:
+        text_on_screen("GAME OVER", Font2, 'white', 130, 250)
+        text_on_screen("SCORE: " + str(score), Font2, "white", 130, 280)
+        text_on_screen("Нажмите пробел, чтобы начать сначала", Font1, 'white', 55, 350)
+        key = pygame.key.get_pressed()
+        if key[pygame.K_SPACE]:
+            # обнуляем переменные
+            game_over = False
+            score = 0
+            speed_of_scroll = 0
+            # переносим персонажа на старт позицию
+            player.rect.center = (Screen_width // 2, Screen_height - 150)
+            # обнуляем платформы
+            platforms.empty()
+            # стартовая платформа
+            platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100)
+            platforms.add(platform)
+
     # события в игре
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
