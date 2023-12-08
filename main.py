@@ -1,5 +1,6 @@
 import pygame
 import random
+import os
 
 pygame.init()
 
@@ -18,6 +19,7 @@ bg = pygame.image.load("images/bg.png").convert_alpha()
 player_image = pygame.image.load("images/player.png").convert_alpha()
 platform_img = pygame.image.load("images/platform.png").convert_alpha()
 
+
 # шрифты
 Font1 = pygame.font.SysFont("arial", 20)
 Font2 = pygame.font.SysFont("arial", 25)
@@ -30,8 +32,15 @@ speed_of_scroll = 0
 scroll_bg = 0 
 game_over = False
 score = 0
+dark_count = 0
 
-
+# запись рекорда в файл
+if os.path.exists("score.txt"):
+    with open("score.txt", 'r') as file:
+        high_score = int(file.read())
+else:
+    high_score = 0
+    
 # движение фона
 def bg_move(scroll_bg):
     screen.blit(bg, (0, 0 + scroll_bg))
@@ -42,6 +51,11 @@ def bg_move(scroll_bg):
 def text_on_screen(text, font, tcolor, x, y):
     write = font.render(text, True, tcolor)
     screen.blit(write, (x, y))
+
+
+# вывод счёта
+def score_on_screen():
+    text_on_screen("SCORE: " + str(score), Font1, "white", 0, 0)
     
 
 class Player():
@@ -115,14 +129,27 @@ class Player():
 
 class Platform(pygame.sprite.Sprite):
     # создание размера и положения платформы
-    def __init__(self, x, y, width):
+    def __init__(self, x, y, width, moving):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.transform.scale(platform_img, (width, 10))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.moving = moving
+        self.moving_count = random.randint(0, 40)
+        self.direction = random.choice([-1, 1])
         
     def update(self, speed_of_scroll):
+        # проверка: двигается ли платформа
+        if self.moving == 2:
+            self.moving_count += 1
+            self.rect.x += self.direction
+
+        # смена напрвления платформы +к концу игрового окна
+        if self.moving_count >= 100 or self.rect.left < 0 or self.rect.right > Screen_width:
+            self.direction *= -1
+            self.moving_count = 0
+            
         # обновление положения платформ по y
         self.rect.y += speed_of_scroll
 
@@ -136,7 +163,7 @@ class Platform(pygame.sprite.Sprite):
 platforms = pygame.sprite.Group()
 
 # стартовая платформа
-platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100)
+platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100, 1)
 platforms.add(platform)
 
 # расположение персонажа
@@ -161,38 +188,67 @@ while flag:
             pl_width = random.randint(40, 60)
             pl_x = random.randint(0, Screen_width - pl_width)
             pl_y = platform.rect.y - random.randint(80, 120)
-            platform = Platform(pl_x, pl_y, pl_width)
+            pl_moving = random.randint(1, 2)  # 1 - платформа на месте; 2 - платформа двигается
+            platform = Platform(pl_x, pl_y, pl_width, pl_moving)
             platforms.add(platform)
-    
+
+        # обновление платформ
         platforms.update(speed_of_scroll)
+
+        # обновление счёта
+        if speed_of_scroll > 0:
+            score += speed_of_scroll
+
+        # обозначение прошлого рекорда
+        pygame.draw.line(screen, "white", (0, score - high_score + Upline),
+                         (Screen_width, score - high_score + Upline), 3)
+        text_on_screen('HIGH SCORE', Font1, "white", Screen_width - 130, score - high_score + Upline)
+
         
         platforms.draw(screen)
         player.draw()
+        score_on_screen()
 
         # конец игры?
         if player.rect.top > Screen_height:
             game_over = True
     else:
-        text_on_screen("GAME OVER", Font2, 'white', 130, 250)
-        text_on_screen("SCORE: " + str(score), Font2, "white", 130, 280)
-        text_on_screen("Нажмите пробел, чтобы начать сначала", Font1, 'white', 55, 350)
-        key = pygame.key.get_pressed()
-        if key[pygame.K_SPACE]:
-            # обнуляем переменные
-            game_over = False
-            score = 0
-            speed_of_scroll = 0
-            # переносим персонажа на старт позицию
-            player.rect.center = (Screen_width // 2, Screen_height - 150)
-            # обнуляем платформы
-            platforms.empty()
-            # стартовая платформа
-            platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100)
-            platforms.add(platform)
+        #затемнение экрана
+        if dark_count < Screen_width:
+            dark_count += 8
+            pygame.draw.rect(screen, "black", (0, 0, dark_count, Screen_height))
+        else:
+            text_on_screen("GAME OVER", Font2, 'white', 130, 250)
+            text_on_screen("SCORE: " + str(score), Font2, "white", 130, 280)
+            text_on_screen("Нажмите пробел, чтобы начать сначала", Font1, 'white', 55, 350)
+            key = pygame.key.get_pressed()
+            
+            # обновление рекорда
+            if score > high_score:
+                high_score = score
+                with open("score.txt", 'w') as file:
+                        file.write(str(high_score))
+            if key[pygame.K_SPACE]:
+                # обнуляем переменные
+                game_over = False
+                score = 0
+                speed_of_scroll = 0
+                dark_count = 0
+                # переносим персонажа на старт позицию
+                player.rect.center = (Screen_width // 2, Screen_height - 150)
+                # обнуляем платформы
+                platforms.empty()
+                # стартовая платформа
+                platform = Platform(Screen_width // 2 - 45, Screen_height - 50, 100, 1)
+                platforms.add(platform)
 
     # события в игре
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            if score > high_score:
+                high_score = score
+                with open("score.txt", 'w') as file:
+                    file.write(str(high_score))
             flag = False
 
     pygame.display.update()
